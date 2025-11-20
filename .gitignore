@@ -1,0 +1,32 @@
+# Build artifacts
+/build/
+/build-wasm/
+/dist/
+/web-dist/
+
+# CMake cruft
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.tags
+.clangd/
+.cache/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Emscripten/HTTP server junk
+*.tmp

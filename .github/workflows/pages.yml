@@ -1,0 +1,67 @@
+name: github-pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Configure (WASM)
+        run: |
+          emcmake cmake -S . -B build-wasm \
+            -DGB_TARGET_WASM=ON \
+            -DGB_TARGET_DESKTOP=OFF \
+            -DGB_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPLATFORM=Web
+
+      - name: Build (WASM)
+        run: cmake --build build-wasm --config Release --parallel
+
+      - name: Prepare web-dist
+        run: |
+          mkdir -p web-dist
+          cp build-wasm/index.html web-dist/
+          if [ -f build-wasm/index.js ]; then cp build-wasm/index.js web-dist/; fi
+          if [ -f build-wasm/index.wasm ]; then cp build-wasm/index.wasm web-dist/; fi
+          if [ -d assets ]; then cp -r assets web-dist/assets; fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

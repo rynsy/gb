@@ -1,0 +1,118 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DGB_TARGET_DESKTOP=ON -DGB_BUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+      - name: Package artifact
+        run: |
+          cd build
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            powershell -Command "Compress-Archive gbemu_desktop.exe ../gbemu-desktop-${{ runner.os }}.zip"
+          else
+            zip ../gbemu-desktop-${{ runner.os }}.zip gbemu_desktop
+          fi
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gbemu-desktop-${{ runner.os }}
+          path: gbemu-desktop-${{ runner.os }}.zip
+
+  build-wasm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Configure (WASM)
+        run: |
+          emcmake cmake -S . -B build-wasm \
+            -DGB_TARGET_WASM=ON \
+            -DGB_TARGET_DESKTOP=OFF \
+            -DGB_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPLATFORM=Web
+
+      - name: Build (WASM)
+        run: cmake --build build-wasm --config Release --parallel
+
+      - name: Package WASM bundle
+        run: |
+          mkdir -p web-dist
+          cp build-wasm/index.html web-dist/
+          if [ -f build-wasm/index.js ]; then cp build-wasm/index.js web-dist/; fi
+          if [ -f build-wasm/index.wasm ]; then cp build-wasm/index.wasm web-dist/; fi
+          if [ -d assets ]; then cp -r assets web-dist/assets; fi
+          cd web-dist
+          zip ../gbemu-web-wasm.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gbemu-web-wasm
+          path: gbemu-web-wasm.zip
+
+  release:
+    needs: [build, build-wasm]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download desktop Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gbemu-desktop-Linux
+          path: artifacts/linux
+
+      - name: Download desktop Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gbemu-desktop-Windows
+          path: artifacts/windows
+
+      - name: Download WASM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: gbemu-web-wasm
+          path: artifacts/web
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/linux/gbemu-desktop-Linux.zip
+            artifacts/windows/gbemu-desktop-Windows.zip
+            artifacts/web/gbemu-web-wasm.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
