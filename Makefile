@@ -51,3 +51,9 @@ status:
 	@echo "Release badge:"
 	@echo "  https://github.com/rynsy/gb/actions/workflows/release.yml/badge.svg"
 
+update-dependencies:
+	git submodule update --init --recursive
+	git add external/raylib external/rlImGui
+	git commit -m "Pin third-party deps"
+
+

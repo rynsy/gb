@@ -29,3 +29,5 @@ Thumbs.db
 
 # Emscripten/HTTP server junk
 *.tmp
+
+/emsdk/
