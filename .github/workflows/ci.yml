@@ -33,7 +33,8 @@ jobs:
             libxrandr-dev \
             libxi-dev \
             libgl1-mesa-dev \
-            libxkbcommon-dev
+            libxkbcommon-dev \
+            libxinerama-dev
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DGB_TARGET_DESKTOP=ON -DGB_BUILD_TESTS=ON
