@@ -113,7 +113,7 @@ jobs:
 
           cd web-dist
           ls -R
-          zip ../gbemu-web-wasm.zip .
+          zip -r ../gbemu-web-wasm.zip .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
