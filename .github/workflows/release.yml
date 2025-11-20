@@ -87,28 +87,32 @@ jobs:
         run: cmake --build build-wasm --config Release --parallel
 
       - name: Package WASM bundle
+        shell: bash
         run: |
           mkdir -p web-dist
 
-          if [ -f build-wasm/index.html ]; then
-            cp build-wasm/index.html web-dist/
-            [ -f build-wasm/index.js ] && cp build-wasm/index.js web-dist/
-            [ -f build-wasm/index.wasm ] && cp build-wasm/index.wasm web-dist/
-          elif [ -f build-wasm/Release/index.html ]; then
-            cp build-wasm/Release/index.html web-dist/
-            [ -f build-wasm/Release/index.js ] && cp build-wasm/Release/index.js web-dist/
-            [ -f build-wasm/Release/index.wasm ] && cp build-wasm/Release/index.wasm web-dist/
-          else
-            echo "index.html not found in build-wasm; failing"
+          shopt -s nullglob
+
+          files=(build-wasm/*.html build-wasm/*.js build-wasm/*.wasm)
+          if [ ${#files[@]} -eq 0 ]; then
+            files=(build-wasm/Release/*.html build-wasm/Release/*.js build-wasm/Release/*.wasm)
+          fi
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No WASM artifacts (.html/.js/.wasm) found in build-wasm"
+            echo "Contents of build-wasm:"
             ls -R build-wasm || true
             exit 1
           fi
+
+          cp "${files[@]}" web-dist/
 
           if [ -d assets ]; then
             cp -r assets web-dist/assets
           fi
 
           cd web-dist
+          ls -R
           zip ../gbemu-web-wasm.zip .
 
       - name: Upload artifact
