@@ -50,7 +50,7 @@ jobs:
         run: |
           cd build
           if [ "${{ runner.os }}" = "Windows" ]; then
-            powershell -Command "Compress-Archive gbemu_desktop.exe ../gbemu-desktop-${{ runner.os }}.zip"
+            powershell -Command "Compress-Archive -Path 'Release/gbemu_desktop.exe' -DestinationPath '../gbemu-desktop-${{ runner.os }}.zip'"
           else
             zip ../gbemu-desktop-${{ runner.os }}.zip gbemu_desktop
           fi
@@ -89,10 +89,25 @@ jobs:
       - name: Package WASM bundle
         run: |
           mkdir -p web-dist
-          cp build-wasm/index.html web-dist/
-          if [ -f build-wasm/index.js ]; then cp build-wasm/index.js web-dist/; fi
-          if [ -f build-wasm/index.wasm ]; then cp build-wasm/index.wasm web-dist/; fi
-          if [ -d assets ]; then cp -r assets web-dist/assets; fi
+
+          if [ -f build-wasm/index.html ]; then
+            cp build-wasm/index.html web-dist/
+            [ -f build-wasm/index.js ] && cp build-wasm/index.js web-dist/
+            [ -f build-wasm/index.wasm ] && cp build-wasm/index.wasm web-dist/
+          elif [ -f build-wasm/Release/index.html ]; then
+            cp build-wasm/Release/index.html web-dist/
+            [ -f build-wasm/Release/index.js ] && cp build-wasm/Release/index.js web-dist/
+            [ -f build-wasm/Release/index.wasm ] && cp build-wasm/Release/index.wasm web-dist/
+          else
+            echo "index.html not found in build-wasm; failing"
+            ls -R build-wasm || true
+            exit 1
+          fi
+
+          if [ -d assets ]; then
+            cp -r assets web-dist/assets
+          fi
+
           cd web-dist
           zip ../gbemu-web-wasm.zip .
 
